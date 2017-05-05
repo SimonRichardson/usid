@@ -9,6 +9,19 @@ import (
 	"time"
 )
 
+func TestTimestampEquality(t *testing.T) {
+	var (
+		entropy  = RndEntropy()
+		expected = time.Now()
+		id       = MustNew(Timestamp(expected), entropy)
+		actual   = time.Unix(0, int64(id.Timestamp()))
+	)
+
+	if !expected.Equal(actual) {
+		t.Errorf("Expected: %v, actual: %v", expected, actual)
+	}
+}
+
 func TestNew(t *testing.T) {
 	t.Parallel()
 
@@ -274,7 +287,7 @@ func TestString(t *testing.T) {
 				id = MustNew(Timestamp(stamp), entropy)
 			)
 
-			return len(id.String()) == 32
+			return len(id.String()) == 36
 		}
 
 		if err := quick.Check(fn, nil); err != nil {

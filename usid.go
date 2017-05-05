@@ -16,10 +16,10 @@ import (
 /*
 A USID is a Unique Sortable Identifier
 */
-type USID [16]byte
+type USID [18]byte
 
 const (
-	defaultEntropyOffset = 6
+	defaultEntropyOffset = 8
 )
 
 var (
@@ -53,9 +53,10 @@ func MustNew(stamp uint64, entropy io.Reader) USID {
 
 // Timestamp returns the Unix time encoded in the USID
 func (u USID) Timestamp() uint64 {
-	return uint64(u[5]) | uint64(u[4])<<8 |
-		uint64(u[3])<<16 | uint64(u[2])<<24 |
-		uint64(u[1])<<32 | uint64(u[0])<<40
+	return uint64(u[7]) | uint64(u[6])<<8 |
+		uint64(u[5])<<16 | uint64(u[4])<<24 |
+		uint64(u[3])<<32 | uint64(u[2])<<40 |
+		uint64(u[1])<<48 | uint64(u[0])<<56
 }
 
 var maxTimestamp = USID{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}.Timestamp()
@@ -67,12 +68,14 @@ func (u *USID) SetTimestamp(stamp uint64) error {
 		return ErrBigTime
 	}
 
-	(*u)[0] = byte(stamp >> 40)
-	(*u)[1] = byte(stamp >> 32)
-	(*u)[2] = byte(stamp >> 24)
-	(*u)[3] = byte(stamp >> 16)
-	(*u)[4] = byte(stamp >> 8)
-	(*u)[5] = byte(stamp)
+	(*u)[0] = byte(stamp >> 56)
+	(*u)[1] = byte(stamp >> 48)
+	(*u)[2] = byte(stamp >> 40)
+	(*u)[3] = byte(stamp >> 32)
+	(*u)[4] = byte(stamp >> 24)
+	(*u)[5] = byte(stamp >> 16)
+	(*u)[6] = byte(stamp >> 8)
+	(*u)[7] = byte(stamp)
 
 	return nil
 }
@@ -104,8 +107,7 @@ func (u USID) String() string {
 
 // Timestamp concerts a time.Time into a Unix timestamp that USID can utilise.
 func Timestamp(t time.Time) uint64 {
-	return uint64(t.Unix())*1000 +
-		uint64(t.Nanosecond()/int(time.Millisecond))
+	return uint64(t.UnixNano())
 }
 
 // RndEntropy returns a random source of entropy for the creation of a USID

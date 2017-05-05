@@ -4,9 +4,8 @@ Unique sortable identifier
 
 ## Introduction
 
-The USID creates a unique identifier using Unix timestamp (milliseconds in this
-case, but nanoseconds could easily be used if we increase the size of the
-identifier) and an entropy source. With the use of time, we naturally get a
+The USID creates a unique identifier using Unix timestamp (nanoseconds in this
+case) and an entropy source. With the use of time, we naturally get a
 sortable identifier as long as the machine times are synchronized (see `Compare`
 method of USID).
 
