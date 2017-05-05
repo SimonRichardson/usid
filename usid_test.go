@@ -2,10 +2,65 @@ package usid
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"testing"
 	"testing/quick"
 	"time"
 )
+
+func TestNew(t *testing.T) {
+	t.Parallel()
+
+	runner := func(reader io.Reader) error {
+		var (
+			num = 1000
+			res = make([]USID, num, num)
+		)
+		for i := 0; i < num; i++ {
+			res[i] = MustNew(Timestamp(time.Now()), reader)
+		}
+
+		// check for duplications
+		for k0, v0 := range res {
+			for k1, v1 := range res {
+				if k0 == k1 {
+					continue
+				}
+
+				if bytes.Equal(v0[:], v1[:]) {
+					return errors.New("match")
+				}
+			}
+		}
+		return nil
+	}
+
+	// Test that using a source doesn't generate the same id consecutively.
+	t.Run("MachEntropy", func(t *testing.T) {
+		if err := runner(MachEntropy()); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("RndEntropy", func(t *testing.T) {
+		if err := runner(RndEntropy()); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("SecRndEntropy", func(t *testing.T) {
+		if err := runner(SecRndEntropy()); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("CryptoRndEntropy", func(t *testing.T) {
+		if err := runner(CryptoRndEntropy()); err != nil {
+			t.Error(err)
+		}
+	})
+}
 
 func TestTime(t *testing.T) {
 	t.Parallel()
@@ -15,7 +70,7 @@ func TestTime(t *testing.T) {
 		fn := func() bool {
 			var (
 				stamp = time.Now()
-				id    = MustNew(Timestamp(stamp), RndEntropy())
+				id    = MustNew(Timestamp(stamp), SecRndEntropy())
 			)
 			return id.Timestamp() == Timestamp(stamp)
 		}
@@ -58,7 +113,7 @@ func TestCompare(t *testing.T) {
 		fn := func() bool {
 			var (
 				stamp = time.Now()
-				id    = MustNew(Timestamp(stamp), RndEntropy())
+				id    = MustNew(Timestamp(stamp), SecRndEntropy())
 			)
 			return id.Compare(id) == 0
 		}
@@ -89,7 +144,7 @@ func TestCompare(t *testing.T) {
 			var (
 				offset  = clamp(abs(dur))
 				stamp   = time.Now()
-				entropy = RndEntropy()
+				entropy = SecRndEntropy()
 
 				a = MustNew(Timestamp(stamp.Add(-offset)), entropy)
 				b = MustNew(Timestamp(stamp), entropy)
@@ -125,6 +180,8 @@ func TestCompare(t *testing.T) {
 }
 
 func TestEntropy(t *testing.T) {
+	t.Parallel()
+
 	t.Run("SetEntropy", func(t *testing.T) {
 		fn := func(b [10]byte) bool {
 			var id USID
@@ -140,14 +197,79 @@ func TestEntropy(t *testing.T) {
 			t.Error(err)
 		}
 	})
+
+	// Test comparing sunsequent reads don't lead to identical bytes.
+	t.Run("RndEntropy", func(t *testing.T) {
+		fn := func() bool {
+			var (
+				a, b    [10]byte
+				entropy = RndEntropy()
+			)
+			if _, err := entropy.Read(a[:]); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := entropy.Read(b[:]); err != nil {
+				t.Fatal(err)
+			}
+			return !bytes.Equal(a[:], b[:])
+		}
+
+		if err := quick.Check(fn, nil); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Test comparing sunsequent reads don't lead to identical bytes.
+	t.Run("SecRndEntropy", func(t *testing.T) {
+		fn := func() bool {
+			var (
+				a, b    [10]byte
+				entropy = SecRndEntropy()
+			)
+			if _, err := entropy.Read(a[:]); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := entropy.Read(b[:]); err != nil {
+				t.Fatal(err)
+			}
+			return !bytes.Equal(a[:], b[:])
+		}
+
+		if err := quick.Check(fn, nil); err != nil {
+			t.Error(err)
+		}
+	})
+
+	// Test comparing sunsequent reads don't lead to identical bytes.
+	t.Run("MachEntropy", func(t *testing.T) {
+		fn := func() bool {
+			var (
+				a, b    [10]byte
+				entropy = MachEntropy()
+			)
+			if _, err := entropy.Read(a[:]); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := entropy.Read(b[:]); err != nil {
+				t.Fatal(err)
+			}
+			return !bytes.Equal(a[:], b[:])
+		}
+
+		if err := quick.Check(fn, nil); err != nil {
+			t.Error(err)
+		}
+	})
 }
 
 func TestString(t *testing.T) {
+	t.Parallel()
+
 	t.Run("String", func(t *testing.T) {
 		fn := func() bool {
 			var (
 				stamp   = time.Now()
-				entropy = RndEntropy()
+				entropy = SecRndEntropy()
 
 				id = MustNew(Timestamp(stamp), entropy)
 			)

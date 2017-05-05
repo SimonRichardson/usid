@@ -15,7 +15,6 @@ import (
 
 /*
 A USID is a Unique Sortable Identifier
-
 */
 type USID [16]byte
 
@@ -114,26 +113,47 @@ func RndEntropy() io.Reader {
 	return rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
+// SecRndEntropy returns a random source that prevents issues with dead locks
+// (race detector).
+func SecRndEntropy() io.Reader {
+	return newLockedRand(&lockedSource{
+		src: rand.NewSource(time.Now().UnixNano()),
+	})
+}
+
 // CryptoRndEntropy returns a cryptographic random source of entropy for the
 // creation of a USID
 func CryptoRndEntropy() io.Reader {
 	return crand.Reader
 }
 
-// MachEntropy returns entropy that can be used to prevent collisions.
+// MachEntropy returns entropy that can be used to prevent collisions, yet be
+// sortable in a more predictable manor.
 func MachEntropy() io.Reader {
-	var b [10]byte
+	return machReader{}
+}
 
-	b[0] = byte(processId >> 8)
-	b[1] = byte(processId)
+// processID and counter
+var (
+	// processID grabs application process id to ensure uniqueness between
+	// multiple applications running on the same hardware.
+	processID = os.Getpid()
+
+	// Counter generates an atomically incremented integer. To prevent
+	// collisions on different machines, a random offset it chosen first.
+	counter = uint64(rand.New(rand.NewSource(time.Now().UnixNano())).Uint32())
+)
+
+// machReader abuses the io.Reader interface to allow the unique injection of
+// machine information.
+type machReader struct{}
+
+func (m machReader) Read(b []byte) (n int, err error) {
+	b[0] = byte(processID >> 8)
+	b[1] = byte(processID)
 
 	c := atomic.AddUint64(&counter, 1)
 	binary.LittleEndian.PutUint64(b[2:], c)
 
-	return bytes.NewReader(b[:])
+	return 10, nil
 }
-
-var (
-	processId        = os.Getpid()
-	counter   uint64 = 0
-)
