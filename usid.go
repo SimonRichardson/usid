@@ -59,7 +59,7 @@ func (u USID) Timestamp() uint64 {
 		uint64(u[1])<<48 | uint64(u[0])<<56
 }
 
-var maxTimestamp = USID{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}.Timestamp()
+var maxTimestamp = USID{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}.Timestamp()
 
 // SetTimestamp sets the timestamp component of the USID to the given Unix
 // timestamp
