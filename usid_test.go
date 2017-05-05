@@ -141,3 +141,22 @@ func TestEntropy(t *testing.T) {
 		}
 	})
 }
+
+func TestString(t *testing.T) {
+	t.Run("String", func(t *testing.T) {
+		fn := func() bool {
+			var (
+				stamp   = time.Now()
+				entropy = RndEntropy()
+
+				id = MustNew(Timestamp(stamp), entropy)
+			)
+
+			return len(id.String()) == 32
+		}
+
+		if err := quick.Check(fn, nil); err != nil {
+			t.Error(err)
+		}
+	})
+}

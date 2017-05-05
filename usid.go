@@ -5,6 +5,7 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 	"os"
@@ -96,6 +97,10 @@ func (u *USID) SetEntropy(b [10]byte) error {
 // The result will be 0 if id == other, -1 if id < other and +1 if id > other.
 func (u USID) Compare(other USID) int {
 	return bytes.Compare(u[:], other[:])
+}
+
+func (u USID) String() string {
+	return fmt.Sprintf("%x", string(u[:]))
 }
 
 // Timestamp concerts a time.Time into a Unix timestamp that USID can utilise.
